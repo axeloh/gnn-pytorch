@@ -8,7 +8,7 @@ import torch.nn.functional as F
 from torch.nn import Linear
 from torch.nn import BatchNorm1d
 from torch_geometric.nn import GCNConv
-from torch_geometric.nn import global_add_pool, global_mean_pool
+from torch_geometric.nn import global_add_pool, global_mean_pool, global_max_pool
 from torch_geometric.data import DataLoader
 import mol2graph
 import requests
@@ -74,12 +74,11 @@ class Net(torch.nn.Module):
         # print(data.batch.shape)
         x, edge_index = data.x, data.edge_index
         # print(x.shape)
-        # for gi in range(data.batch.shape[0]):
-        #     graph_ids = (data.batch == gi).nonzero().squeeze()
-        #     x[graph_ids, :] /= len(graph_ids)
-        #     #print(graph_ids)
-        #     #print(x)
-        #     #break
+        
+        # Normalize adjacency matrix by node degrees
+        for gi in range(data.batch.shape[0]):
+            graph_ids = (data.batch == gi).nonzero().squeeze()
+            x[graph_ids, :] /= len(graph_ids)
 
         # sys.exit()
         x = F.relu(self.conv1(x, edge_index))
@@ -94,6 +93,7 @@ class Net(torch.nn.Module):
         x = F.relu(self.fc2(x))
         x = F.dropout(x, p=0.2, training=self.training)
         x = self.fc3(x)
+
         x = F.log_softmax(x, dim=1)
         return x
 
@@ -168,7 +168,6 @@ if __name__ == '__main__':
     print(f'\t # of features per edge: {first_sample.edge_attr.shape[1]}')
 
     # plot_graph(train_x[0])
-
     train_loader = DataLoader(train_x, batch_size=64, shuffle=True, drop_last=True)
     val_loader = DataLoader(test_x, batch_size=64, shuffle=True, drop_last=True)
 
@@ -192,6 +191,8 @@ if __name__ == '__main__':
     ax.plot([e for e in range(n_epochs)], hist["val_acc"], label="val_acc")
     plt.xlabel("epoch")
     ax.legend()
-    plt.savefig('./outputs/loss_and_acc.png')
+    # plt.savefig('./outputs/loss_and_acc.png')
     plt.show()
 
+    test_acc = get_accuracy(val_loader)
+    print(f'---- Final validation accuracy: {test_acc:.3f}')
