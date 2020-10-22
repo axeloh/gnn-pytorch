@@ -74,11 +74,6 @@ class Net(torch.nn.Module):
         # print(data.batch.shape)
         x, edge_index = data.x, data.edge_index
         # print(x.shape)
-        
-        # Normalize adjacency matrix by node degrees
-        for gi in range(data.batch.shape[0]):
-            graph_ids = (data.batch == gi).nonzero().squeeze()
-            x[graph_ids, :] /= len(graph_ids)
 
         # sys.exit()
         x = F.relu(self.conv1(x, edge_index))
